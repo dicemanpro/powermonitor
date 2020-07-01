@@ -4,7 +4,7 @@ sap.ui.define([
 		
 	"use strict";
 	
-	return Controller.extend("com.noki_online.ui5app.App", {
+	return Controller.extend("com.ok40.powermon.App", {
 		
 	});
 });

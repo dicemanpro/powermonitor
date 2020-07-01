@@ -1,7 +1,7 @@
 {
 	"_version": "1.7.0",
 	"sap.app": {
-		"id": "com.noki_online.ui5app",
+		"id": "com.ok40.powermon",
 		"type": "application",
 		"i18n": "i18n/i18n.properties",
 		"applicationVersion": {
@@ -39,7 +39,7 @@
 
 	"sap.ui5": {
 		"rootView": {
-			"viewName": "com.noki_online.ui5app.view.App",
+			"viewName": "com.ok40.powermon.view.App",
 			"type": "XML"
 		},
 		"dependencies": {
@@ -62,19 +62,22 @@
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "com.noki_online.ui5app.i18n.i18n"
+					"bundleName": "com.ok40.powermon.i18n.i18n"
 				}
 			},
 			"mockData": {
 				"type": "sap.ui.model.json.JSONModel",
 				"uri": "./model/mockdata.json"
+			},
+			"ui": {
+				"type": "sap.ui.model.json.JSONModel"
 			}
 		},
 		"routing": {
 			"config": {
 				"routerClass": "sap.m.routing.Router",
 				"viewType": "XML",
-				"viewPath": "com.noki_online.ui5app.view",
+				"viewPath": "com.ok40.powermon.view",
 				"controlId": "app",
 				"controlAggregation": "pages",
 				"transition": "fade",
@@ -93,11 +96,15 @@
 						"splashscreen"
 					]
 				}, {
-					"pattern": "record",
-					"name": "record",
+					"pattern": "main",
+					"name": "main",
 					"target": [
-						"record"
+						"main"
 					]
+				}, {
+					"pattern": "settings",
+					"name": "settings",
+					"target": ["settings"]
 				}
 			],
 			"targets": {
@@ -107,11 +114,17 @@
 					"viewId": "Splashscreen",
 					"viewLevel": 1
 				},
-				"record": {
+				"main": {
 					"viewName": "Record",
 					"viewId": "Record",
 					"viewLevel": 2
-				}				
+				},
+				"settings": {
+					"viewName": "Settings",
+					"viewId": "settings",
+					"viewLevel": 2,
+					"title": "{i18n>objectViewTitle}"
+				}			
 			}
 		},
 		"resources": {

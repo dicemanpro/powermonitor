@@ -1,42 +1,87 @@
-<mvc:View 
-    controllerName="com.noki_online.ui5app.controller.Record"
-    xmlns:mvc="sap.ui.core.mvc"  
-    xmlns:core="sap.ui.core"
-    xmlns="sap.m"
-	displayBlock="true">
-	<Page showHeader="false">
+<mvc:View controllerName="com.ok40.powermon.controller.Record" 
+	xmlns:mvc="sap.ui.core.mvc" 
+	xmlns:f="sap.f" 
+	xmlns:grid="sap.ui.layout.cssgrid" 
+	xmlns:core="sap.ui.core" 
+	xmlns:t="sap.tnt" 
+	xmlns="sap.m" displayBlock="true">
+	<Page title="Энергомонитор" floatingFooter="true">
+		<headerContent>
+			<Button icon="sap-icon://action-settings" tooltip="Настройки" press="onNavToSettings"/>
+		</headerContent>
 		<content>
-
-			<MessageStrip text="For best experience allow access to the microphone" visible="{= ${config>/SpeechRecognitionAvailable} &amp;&amp; ${config>/SystemDeniedAccess}}" type="Error" showIcon="true" class="sapUiSmallMargin" /> 
-
-            <VBox alignItems="Center" class="sapUiLargeMargin">
-
-                <Title text="Take Notes" titleStyle="H1" class="sapUiMediumMarginBottom"/>
-                <Text text="With this application you can take notes by speaking in the microphone, the app will save the time it took you to say the text together with the text itself" textAlign="Center" />
-
-                <HBox width="100%" justifyContent="Center" class="sapUiLargeMargin">
-                    <Button icon="sap-icon://microphone" class="blueButton" press="onRecordText" visible="{= !${viewModel>/recordingRunning} || ${viewModel>/androidDevice}}" />
-                    <Button icon="sap-icon://stop" class="redButton" press="onStopVoice" visible="{= ${viewModel>/recordingRunning} &amp;&amp; !${viewModel>/androidDevice} }" />
-                </HBox>
-                    <Label text="{path: 'viewModel>/liveTimer', formatter: '.formatter.msToMinutesAndSeconds'}" class="sapUiSmallMarginTop" visible="{viewModel>/recordingRunning}" />
-            </VBox>
-
-            <List items="{path: 'viewModel>/textData/', sorter: { path: 'id', descending: true } }" noDataText="No Text recorded yet" visible="{= ${viewModel>/textData}.length > 0}" >
-                <CustomListItem class="textList">
-                    <VBox alignItems="Center" alignContent="Center" class="greyMessageBox" >
-                        <Text text="{viewModel>title}" class="blueText sapUiTinyMarginTopBottom sapUiTinyMarginBeginEnd" />
-                        <Text text="{viewModel>time}" class="darkGreyText sapUiTinyMarginBottom sapUiTinyMarginBeginEnd" />
-                        <Text text="{viewModel>text}" class="greyText sapUiTinyMarginBottom sapUiTinyMarginBeginEnd" />                                                        
-                    </VBox>
-                </CustomListItem>
-            </List>
-        </content>
-        <footer>
-            <Toolbar>
-                <ToolbarSpacer />
-                <Text text="©2019 Noki-Online" class="greyText" />
-                <ToolbarSpacer />
-            </Toolbar>
-        </footer>
-    </Page>
+			<HBox justifyContent="Center" height="2rem" alignItems="Center">
+				<Text text="Cостояние:"/>
+				<ObjectStatus text="{path: 'ui>/network', formatter: '.formatter.formatConnectionStatus'}" press="onTryReconnect" inverted="true" active="true" state="{path: 'ui>/currentNetworkName', formatter: '.formatter.formatConnectionState'}"/>
+			</HBox>
+			<IconTabBar headerMode="Inline" expanded="{device>/isNoPhone}" class="sapUiResponsiveContentPadding">
+				<items>
+					<IconTabFilter text="Обход" count="{ui>/settings/networkModulesCount}">
+						<f:GridList mode="None" items="{ path: 'ui>/nodes', filters: [{path: 'Status', operator: 'EQ', value1: 'ACTIVE'}] }" class="sapUiResponsiveContentPadding">
+							<f:customLayout>
+								<grid:GridBasicLayout gridTemplateColumns="1fr 1fr 1fr" gridGap="0.5rem"/>
+							</f:customLayout>
+							<f:GridListItem detailPress="onDetailPress" press="onPress" highlight="{path: 'ui>LastRead', formatter: '.formatter.formatReadStatusState'}" type="Active">
+								<VBox height="100%" class="sapUiSmallMargin">
+									<Title text="{ui>NodeName}" wrapping="false"/>
+									<Label text="{path: 'ui>LastRead', formatter: '.formatter.formatLastReadDate'}" wrapping="false" />
+									<ObjectStatus text="{path: 'ui>LastRead', formatter: '.formatter.formatReadStatus'}"
+										state="{path: 'ui>LastRead', formatter: '.formatter.formatReadStatusState'}" />
+								</VBox>
+							</f:GridListItem>
+						</f:GridList>
+					</IconTabFilter>
+					<IconTabFilter text="Измерения">
+						<Table id="table" width="auto"  noDataText="{i18n>tableNoDataText}" busyIndicatorDelay="0" popinLayout="GridSmall" growing="true" growingScrollToLoad="true" updateFinished="onUpdateFinished"
+							items="{path: 'ui>/list'}">
+							<headerToolbar>
+								<Toolbar>
+									<Title id="tableHeader" text="Прошлые измерения"/>
+									<ToolbarSpacer/>
+									<!-- <Button icon="sap-icon://filter" tooltip="Фильтр" press="onOpenFilter"/> -->
+									<Button icon="sap-icon://excel-attachment" tooltip="Экспорт" press="onExport"/>
+								</Toolbar>
+							</headerToolbar>
+							<columns>
+								<Column>
+									<Text text="Дата"/>
+								</Column>
+								<Column>
+									<Text text="Измеритель"/>
+								</Column>
+								<Column>
+									<Text text="Сумма"/>
+								</Column>
+								<Column minScreenWidth="tablet" demandPopin="true">
+									<Text text="Показания счётчиков"/>
+								</Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<cells>
+										<Text text="{ model: 'ui', path: 'unixtime', type: 'sap.ui.model.type.DateTime', formatOptions: { source: {pattern: 'timestamp'}, style: 'short' } }"/>
+										<ObjectIdentifier title="{ui>point}"/>
+										<ObjectNumber number="{ parts:[{path:'ui>sum'}], type: 'sap.ui.model.type.Currency', formatOptions: {showMeasure: false} }" unit="КВтЧ"/>
+										<HBox justifyContent="SpaceBetween">
+											<ObjectNumber number="{ parts:[{path:'ui>counter1'}], type: 'sap.ui.model.type.Currency', formatOptions: {showMeasure: false} }" unit="КВтЧ"/>
+											<ObjectNumber number="{ parts:[{path:'ui>counter2'}], type: 'sap.ui.model.type.Currency', formatOptions: {showMeasure: false} }" unit="КВтЧ"/>
+											<ObjectNumber number="{ parts:[{path:'ui>counter3'}], type: 'sap.ui.model.type.Currency', formatOptions: {showMeasure: false} }" unit="КВтЧ"/>
+										</HBox>
+									</cells>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</content>
+		<footer>
+			<OverflowToolbar>
+				<!-- <Button text="ADD REC" press="onAddRecordText"/>
+				<Button text="NEW NET" press="onNewNetworkDetected"/> -->
+				<ToolbarSpacer/>
+				<Button text="Считать показания" enabled1="{= !!${ui>/currentNetworkName}}" type="Accept" press="onReadMeasurementsPressed"/>
+			</OverflowToolbar>
+		</footer>
+	</Page>
 </mvc:View>

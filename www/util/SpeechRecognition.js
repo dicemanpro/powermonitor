@@ -1,5 +1,5 @@
 sap.ui.define([
-    "com/noki_online/ui5app/util/SpeechRecognition"
+    "com/ok40/powermon/util/SpeechRecognition"
 ], 
 function(SpeechRecognition) {
     "use strict";

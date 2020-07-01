@@ -1,0 +1,62 @@
+<mvc:View controllerName="com.ok40.powermon.controller.Settings" 
+	xmlns="sap.m" 
+	xmlns:mvc="sap.ui.core.mvc" 
+	xmlns:core="sap.ui.core">
+	<Page id="settings_page" title="Настройки" showNavButton="true" navButtonPress="onNavBack">
+		<content>
+			<List>
+				<InputListItem label="IP адрес">
+					<Input width="80%" value="{ui>/settings/host}" change="onSettingsChanged"/>
+				</InputListItem>
+				<ActionListItem text="Экспорт таблицы" type="Inactive"/>
+				<InputListItem label="Имя файла">
+					<Input placeholder="{ui>/settings/exportFilename}" change="onSettingsChanged"/>
+				</InputListItem>
+				<InputListItem label="Формат">
+					<Select selectedKey="{ui>/settings/exportFormat}" change="onSettingsChanged">
+						<core:Item key="XLS" text="XLS"/>
+						<core:Item key="CSV" text="CSV"/>
+						<core:Item key="JSON" text="JSON"/>
+					</Select>
+				</InputListItem>
+				<!-- <InputListItem label="Только дельта">
+					<Switch enabled="{ui>/settings/exportDeltaOnly}"/>
+				</InputListItem> -->
+				<ActionListItem text="Страница корректировки" type="Inactive"/>
+				<InputListItem label="Логин">
+					<Input placeholder="Логин" value="{ui>/settings/settingsPageLogin}" change="onSettingsChanged"/>
+				</InputListItem>
+				<InputListItem label="Пароль">
+					<Input placeholder="Логин" value="{ui>/settings/settingsPagePassword}" change="onSettingsChanged"/>
+				</InputListItem>
+				<ActionListItem text="Сеть энергомониторов" type="Inactive"/>
+				<InputListItem label="Префикс сети">
+					<Input value="{ui>/settings/networkPrefix}" change="onSettingsChanged"/>
+				</InputListItem>
+			</List>
+			<List items="{ path: 'ui>/nodes' }" mode="Delete" delete="onNodeDelete">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Сопряжённые устройства" level="H2" />
+						<ToolbarSpacer />
+						<!-- <Button icon="sap-icon://add" press="handleButtonPress" /> -->
+					</OverflowToolbar>
+				</headerToolbar>
+				<StandardListItem title="{ui>NodeName}" description="{ui>NodeId}" type="Inactive"/>
+				<CustomListItem visible="{= ${ui>Status} !== 'DELETED'}">
+					<HBox justifyContent="SpaceBetween" alignItems="Center">
+						<VBox class="sapUiSmallMarginBegin sapUiSmallMarginTopBottom">
+							<Title text="{ui>NodeName}"/>
+							<Label text="{ui>NodeId}"/>
+						</VBox>
+						<Select selectedKey="{ui>Status}" change="onNodeStatusChange">
+							<core:Item key="ACTIVE" text="Активный"/>
+							<core:Item key="INACTIVE" text="Неактивный"/>
+						</Select>
+					</HBox>
+				</CustomListItem>
+			</List>
+
+		</content>
+	</Page>
+</mvc:View>

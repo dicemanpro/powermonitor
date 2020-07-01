@@ -1,139 +1,250 @@
 sap.ui.define([
-		"com/noki_online/ui5app/controller/BaseController",
-		"com/noki_online/ui5app/util/SpeechRecognition", 
-		"sap/ui/model/json/JSONModel"
-	], function(BaseController, SpeechRecognition, JSONModel){
-		
+	"com/ok40/powermon/controller/BaseController",
+	"com/ok40/powermon/util/SpeechRecognition",
+	"sap/ui/model/json/JSONModel",
+	"com/ok40/powermon/model/formatter",
+	"com/ok40/powermon/model/mapper",
+	"com/ok40/powermon/model/datahelper",
+	"sap/m/MessageBox",
+	"sap/m/MessageToast",
+	"sap/ui/export/library",
+	"sap/ui/export/Spreadsheet"
+], function (BaseController, SpeechRecognition, JSONModel, formatter, mapper, datahelper, MessageBox, MessageToast, exportLibrary, Spreadsheet) {
+
 	"use strict";
-	
-	return BaseController.extend("com.noki_online.ui5app.controller.Record", {
-		
-		onInit: function() {
-			this.getRouter().getRoute("record").attachPatternMatched(this._onRouteMatched, this);
-		}, 
 
-		_onRouteMatched: function() {
-			this._createViewModel([]);
+	var EdmType = exportLibrary.EdmType;
+
+	return BaseController.extend("com.ok40.powermon.controller.Record", {
+
+		formatter: formatter,
+
+		onInit: function () {
+			this.getRouter().getRoute("main").attachPatternMatched(this._onRouteMatched, this);
 		},
 
-		onRecordText: function() {
-			var bMobile = this.getModel("config").getProperty("/SpeechRecognitionAvailable");
-			var bSystemDeniedAccess = this.getModel("config").getProperty("/SystemDeniedAccess"); 
-			this._runRecordTimer();
 
-			if (!bMobile || bSystemDeniedAccess) {
-				this._openManualInput();
-			} else {
-				var bMicrophoneAccess = this.getModel("config").getProperty("/SpeechRecognitionAllowed");
-				if (bMicrophoneAccess) {
-					this._recordVoice();
-				} else {
-					this._prepareSpeechRecognition();
-				}
+
+		onNavToSettings: function () {
+			this.getRouter().navTo("settings", {}, true);
+		},
+
+		_onRouteMatched: function () {
+			var oComp = this.getOwnerComponent();
+
+			this.getModel("ui").setProperty("/network", undefined);
+			this.checkNetworkConnectivity();
+			if(!oComp.pIndexDBReady){
+				oComp.pIndexDBReady = this._prepareIndexDB();
+			}						
+			oComp.pIndexDBReady.then(this.readAppSettings.bind(this)).then(function () {
+				this.readStoredMeasures();
+				this.readNetworkMap();
+			}.bind(this)).catch(function (e) {
+				console.log(e);
+			});
+		},
+
+		checkNetworkConnectivity: function(){
+			var sNetwork;
+			if(this.getRouter().getHashChanger().getHash() === "main"){
+				if (window.WifiWizard2) {
+					WifiWizard2.getConnectedSSID().then(function (ssid) {					
+						sNetwork = this.getModel("ui").getProperty("/network");
+						if(ssid !== sNetwork){
+							this.getModel("ui").setProperty("/network", ssid);
+							this.onNewNetworkDetected()
+						}else{
+							setTimeout(() => {
+								this.checkNetworkConnectivity();
+							}, 1000);
+						}
+					}.bind(this));
+				}else{
+					setTimeout(() => {
+						this.checkNetworkConnectivity();
+					}, 1000);
+				}	
+			}					
+		},
+
+		onTryReconnect: function () {
+			if (window.WifiWizard2) {
+				WifiWizard2.getConnectedSSID().then(function (a) {
+					console.log(a);
+					this.getModel("ui").setProperty("/network", a);
+				}.bind(this)).catch(function (e) {
+					console.log(e);
+				});
 			}
 		},
 
-		onStopVoice: function() {
-			SpeechRecognition.stopRecording();
-			this.getModel("viewModel").setProperty("/recordingRunning", false);
+		readStoredMeasures: function () {
+			var oModel = this.getModel("ui");
+			var aList = [];
+			var db = this.getOwnerComponent().db;
+			datahelper.readMeasuresFromDB(db).then(function (oMeasures) {
+				oMeasures.forEach(function (m) {
+					aList.push(m);
+				}.bind(this));
+				oModel.setProperty("/list", aList);
+			}.bind(this)).catch(function (e) {
+				console.log(e);
+			});
 		},
 
-		_recordVoice: function() {
-			this.getModel("viewModel").setProperty("/recordingRunning", true);
-			SpeechRecognition.startRecording().then(function(aResult) {
-				if (aResult && aResult.length > 0) {
-					this.getModel("viewModel").setProperty("/textInput", aResult[0]);
-					this._createEntry();	
-				}
-				console.log(oResult);
-			}.bind(this));
-		}, 
 
-		_openManualInput: function() {
 
-			this.getModel("viewModel").setProperty("/textInput", "");
-			this.getModel("viewModel").setProperty("/confirmEnabled", true);
 
-			if (!this._oManualInputDialog) {
-				this._oManualInputDialog = sap.ui.xmlfragment("com.noki_online.ui5app.view.fragments.EnterTextDialog", this);
-				this.getView().addDependent(this._oManualInputDialog); 
+
+		onAddRecordText: function () {
+			var oMeasure = {
+				unixtime: 1589314320314,
+				point: "FPM00",
+				host: "sghlakdi",
+				sum: "453.15",
+				counter1: "454.12",
+				counter2: "333.13",
+				counter3: "979.11"
+			};
+			var db = this.getOwnerComponent().db;
+			datahelper.saveMeasureToDB(db, oMeasure).catch(function (e) {
+				console.log(e);
+			});
+		},
+
+		onNewNetworkDetected: function(){
+			//прочитать префикс
+			//прочитать имя сети
+			//прочитать список сетей из БД
+			//если имя = префикс И сети нет в базе, месадж бокс с вопросом
+			var bFound = false;
+			var sPrefix = this.getSettings().networkPrefix;
+			var oNetworkName = this.getModel("ui").getProperty("/network") || "FPM19";
+			var aNodes = this.getModel("ui").getProperty("/nodes");
+			var oNode, oFoundNode;
+
+			if(oNetworkName.includes(sPrefix)){
+				datahelper.readCurrentMeasurementsFromDevice().then(function (oData) {
+					if(aNodes.length > 0){
+						oFoundNode = !!aNodes.find(function(n){
+							return oData.HostName === n.NodeId;
+						});
+					}					
+					//добавить кейс когда айдишник совпал но имя сети иное
+					if(!oFoundNode){
+						MessageBox.information("Добавить новое устройство " + oNetworkName + " к вашей сети энергомониторов?", {
+							icon: MessageBox.Icon.INFORMATION,
+							title: "Обнаружено новое устройство",
+							actions: [MessageBox.Action.YES, MessageBox.Action.NO],
+							emphasizedAction: MessageBox.Action.YES,
+							onClose: function (sAction) {
+								if(sAction === MessageBox.Action.YES){
+									oNode = {
+										NodeName: oNetworkName,
+										NodeId: oData.HostName,
+										LastRead: new Date().getTime(),
+										Status: "ACTIVE"								
+									};
+									datahelper.saveNodeToDB(this.getOwnerComponent().db, oNode).then(function(){
+										MessageToast.show("Устройство добавлено к сети");
+										this.readNetworkMap();
+									}.bind(this));
+								}
+								MessageToast.show("Action selected: " + sAction);
+							}.bind(this)
+						});
+					}
+				}.bind(this)).catch(function (e, f) {
+					console.log(JSON.stringify(e));
+					console.log(f);
+				});
+			}else{
+				MessageToast.show("Вы подключены к сети, не содержащей '" + sPrefix + "'");
 			}
-			this._oManualInputDialog.open();			
-		}, 
+		},
 
-		onCloseManualInput: function() {
-			this._oManualInputDialog.close();			
-		}, 
+		onReadMeasurementsPressed: function () {
+			var oMeasure;
+			var oModel = this.getModel("ui");
+			var aList = oModel.getProperty("/list") || [];
+			console.log("eto LIST: " + JSON.stringify(aList));
+			var oNetwork = oModel.getProperty("/network");
+			console.log("eto NETWORK: " + oNetwork);
+			datahelper.readCurrentMeasurementsFromDevice(oModel).then(function (oData) {
+				oMeasure = mapper.mapMeasurementData(oData, oNetwork)
+				aList.push(oMeasure);
+				oModel.setProperty("/list", aList);
+				return datahelper.saveMeasureToDB(oMeasure);
+			}.bind(this)).catch(function (e, f) {
+				console.log(JSON.stringify(e));
+				console.log(f);
+			});
+		},
 
-		onConfirmInput: function(oEvent) {
-			this._oManualInputDialog.close();
-			this.getModel("viewModel").setProperty("/confirmEnabled", false);
+		onExport: function(){
+			var oSettings, oSheet, oTable;
 
-			this._createEntry();
+			var oRowBinding = this.byId('table').getBinding('items');
+			var oModel = oRowBinding.getModel();
 
-		}, 
-
-		_runRecordTimer: function() {
-			var oViewModel = this.getModel("viewModel");
-			
-			this.timer = setInterval(function() {
-				var currentTime = parseInt(oViewModel.getProperty("/liveTimer"), 10);
-				oViewModel.setProperty("/liveTimer", currentTime + 1000);
-			}.bind(this), 1000);
-		}, 
-
-		_stopRecordTimer: function() {
-			clearInterval(this.timer);
-		}, 
-
-		_getDateTime: function() {
-			var oDate = new Date();
-
-			return this.formatter.formatDate(oDate);
-		}, 
-
-		_createEntry: function() {
-			this._stopRecordTimer();
-			
-			var oViewModel = this.getModel("viewModel");
-			var aTextList = oViewModel.getProperty("/textData");
-			var oListCount = parseInt(aTextList.length, 10) + 1;
-			var sMilliSeconds = oViewModel.getProperty("/liveTimer");
-			var sTime = this.formatter.msToMinutesAndSeconds(sMilliSeconds);
-
-			var oData = {
-				"id": oListCount, 
-				"title": this._getDateTime(), 
-				"time": sTime, 
-				"text": oViewModel.getProperty("/textInput")
+			oSettings = {
+				workbook: {
+					columns: this.createColumnConfig()
+				},
+				dataSource: oModel.getProperty("/list"),
+				fileName: 'Table export sample.xlsx',
+				worker: false
 			};
 
-			aTextList.push(oData);
-			this._createViewModel(aTextList);
-		}, 
+			oSheet = new Spreadsheet(oSettings);
+			oSheet.build().finally(function() {
+				oSheet.destroy();
+			});
+		},
 
-		_createViewModel: function(aData) { 
-			
-			var oData = {
-				textInput: "",
-				confirmEnabled: true,
-				textData: aData, 
-				androidDevice: sap.ui.Device.os.android ? true : false,
-				recordingRunning: false,
-				liveTimer: 0
-			};
+		createColumnConfig: function() {
+			var aCols = [];
 
-			this._createModel(oData, "viewModel");
-		}, 
+			aCols.push({
+				label: 'Дата',
+				type: EdmType.Number,
+				property: 'unixtime'
+			});
 
-		_createModel: function(aData, sName) {
-			var oModel = new JSONModel(
-				aData	
-			);
-			
-			this.setModel(oModel, sName);
+			aCols.push({
+				label: 'Измеритель',
+				property: 'point',
+				type: EdmType.String
+			});
+
+			aCols.push({
+				label: 'Сумма',
+				property: 'sum',
+				type: EdmType.String
+			});
+
+			aCols.push({
+				label: 'Счётчик1',
+				property: 'counter1',
+				type: EdmType.String
+			});
+
+			aCols.push({
+				label: 'Счётчик2',
+				property: 'counter2',
+				type: EdmType.String
+
+			});
+
+			aCols.push({
+				label: 'Счётчик3',
+				property: 'counter3',
+				type: EdmType.String
+			});
+
+			return aCols;
 		}
-
 
 	});
 });

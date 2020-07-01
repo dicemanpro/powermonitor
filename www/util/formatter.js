@@ -1,5 +1,5 @@
 sap.ui.define([
-	"com/noki_online/ui5app/util/formatter",
+	"com/ok40/powermon/util/formatter",
 ], function(formatter) {
 	"use strict";
 

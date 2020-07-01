@@ -1,5 +1,5 @@
 {
-  "name": "com.noki_online.ui5app",
+  "name": "com.ok40.powermon",
   "displayName": "Noki-UI5",
   "version": "1.0.0",
   "description": "A sample Apache Cordova application that responds to the deviceready event.",
@@ -13,17 +13,26 @@
   "author": "Apache Cordova Team",
   "license": "Apache-2.0",
   "dependencies": {
-    "cordova-android": "^8.0.0",
+    "cordova-android": "^8.1.0",
+    "cordova-browser": "^6.0.0",
     "cordova-ios": "^5.0.1",
-    "cordova-plugin-speechrecognition": "^1.2.0"
+    "cordova-plugin-file": "^6.0.2",
+    "cordova-plugin-http": "^1.2.0",
+    "cordova-plugin-speechrecognition": "^1.2.0",
+    "cordova-plugin-wifiwizard2": "git+https://github.com/tripflex/wifiwizard2.git",
+    "es6-promise-plugin": "^4.1.0",
+    "wifiwizard2": "^3.1.1"
   },
   "cordova": {
     "plugins": {
       "cordova-plugin-speechrecognition": {},
-      "cordova-plugin-whitelist": {}
+      "cordova-plugin-whitelist": {},
+      "wifiwizard2": {},
+      "cordova-plugin-http": {}
     },
     "platforms": [
       "ios",
+      "browser",
       "android"
     ]
   },

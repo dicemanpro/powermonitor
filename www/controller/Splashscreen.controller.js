@@ -1,10 +1,10 @@
 sap.ui.define([
-    "com/noki_online/ui5app/controller/BaseController"
+    "com/ok40/powermon/controller/BaseController"
 ], function(BaseController){
     
 "use strict";
 
-return BaseController.extend("com.noki_online.ui5app.controller.Splashscreen", {
+return BaseController.extend("com.ok40.powermon.controller.Splashscreen", {
     
     onInit: function() {
 
@@ -17,10 +17,16 @@ return BaseController.extend("com.noki_online.ui5app.controller.Splashscreen", {
 
     onDeviceReady: function() {
 
-        // check for availability and permission on microphone
-        this._prepareSpeechRecognition();        
+        var oComp = this.getOwnerComponent();
 
-        this.getRouter().navTo("record");
+        // check for availability and permission on microphone
+        //this._prepareSpeechRecognition();
+
+        if(!oComp.pIndexDBReady){
+            oComp.pIndexDBReady = this._prepareIndexDB(); 
+        }        
+
+        this.getRouter().navTo("main");
     }
 });
 });

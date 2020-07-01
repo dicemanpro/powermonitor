@@ -1,10 +1,10 @@
 sap.ui.define([
 	"sap/ui/core/UIComponent",
-	"com/noki_online/ui5app/model/models"
+	"com/ok40/powermon/model/models"
 ], function(UIComponent, models) {
 	"use strict";
 	
-	return UIComponent.extend("com.noki_online.ui5app.Component", {
+	return UIComponent.extend("com.ok40.powermon.Component", {
 
 		metadata: {
 			manifest: "json"
